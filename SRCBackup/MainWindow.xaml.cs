@@ -10,30 +10,27 @@ using System.Text;
 using Trigger = Microsoft.Win32.TaskScheduler.Trigger;
 
 namespace SRCBackup {
-
     public partial class MainWindow : Window {
-
-        private static readonly IDictionary<string, Trigger> TaskTriggers = new Dictionary<string, Trigger>() {
+        private static readonly Dictionary<string, Trigger> TaskTriggers = new Dictionary<string, Trigger>() {
             { "Daily", new DailyTrigger() },
             { "Weekly", new WeeklyTrigger() },
             { "Monthly", new MonthlyTrigger() }
         };
 
-        string TaskSourceFolder => Settings.Default.SourceFolder;
-        string TaskDestinationFolder => Settings.Default.DestinationFolder;
-        private Trigger ProtoTaskTrigger => TaskTriggers.GetOrDefault(Settings.Default.Trigger, TaskTriggers.Values.FirstOrDefault);
-        private Trigger TaskTrigger {
+        // private string TaskSourceFolder => Settings.Default.SourceFolder;
+        // private string TaskDestinationFolder => Settings.Default.DestinationFolder;
+        private static Trigger ProtoTaskTrigger => TaskTriggers.GetOrDefault(Settings.Default.Trigger, TaskTriggers.Values.FirstOrDefault);
+        private static Trigger TaskTrigger {
             get {
                 var trigger = ProtoTaskTrigger;
                 var now = DateTime.Now;
                 var taskTime = TaskTime;
-                var taskDateTime = new DateTime(now.Year, now.Month, now.Day, TaskTime.Hours, TaskTime.Minutes, TaskTime.Seconds, TaskTime.Milliseconds, now.Kind);
-                trigger.StartBoundary = taskDateTime;
+                trigger.StartBoundary = new DateTime(now.Year, now.Month, now.Day, taskTime.Hours, taskTime.Minutes, taskTime.Seconds, taskTime.Milliseconds, now.Kind);
                 return trigger;
             }
         }
-        TimeSpan TaskTime => Settings.Default.Time.TimeOfDay;
-        bool TaskActive => Settings.Default.Active;
+        private static TimeSpan TaskTime => Settings.Default.Time.TimeOfDay;
+        private static bool TaskActive => Settings.Default.Active;
 
         public MainWindow() {
             InitializeComponent();
@@ -51,7 +48,7 @@ namespace SRCBackup {
                     Settings.Default.Save();
                     SetActive(false);
                 };
-                
+
                 combo.ItemsSource = TaskTriggers.Keys;
                 combo.SelectedItem = Settings.Default.Trigger;
                 combo.SelectionChanged += (s, a) => {
@@ -71,12 +68,13 @@ namespace SRCBackup {
                 active.Click += (s, a) => ToggleActive();
 
                 backup.Click += (s, a) => {
-                    Process process = new Process();
-                    ProcessStartInfo startInfo = new ProcessStartInfo();
-                    startInfo.WindowStyle = ProcessWindowStyle.Normal;
-                    startInfo.FileName = "powershell.exe";
-                    startInfo.Arguments = "-EncodedCommand \"" + ScriptFromSettings() + "\"";
-                    process.StartInfo = startInfo;
+                    Process process = new Process {
+                        StartInfo = new ProcessStartInfo {
+                            WindowStyle = ProcessWindowStyle.Normal,
+                            FileName = "powershell.exe",
+                            Arguments = "-EncodedCommand \"" + ScriptFromSettings() + "\""
+                        }
+                    };
                     process.Start();
                 };
             };
@@ -87,16 +85,17 @@ namespace SRCBackup {
         private void SetActive(bool state = true) {
             if (Settings.Default.Active == state)
                 return;
+
             Settings.Default.Active = state;
             Settings.Default.Save();
             active.Content = ActivateText(Settings.Default.Active);
             SetScheduledBackupTaskActive(Settings.Default.Active);
         }
 
-        private Command CommandFromSettings() {
+        private static Command CommandFromSettings() {
             return new Command(Settings.Default.SourceFolder, Settings.Default.DestinationFolder);
         }
-        private string ScriptFromSettings() {
+        private static string ScriptFromSettings() {
             var command = CommandFromSettings();
             var script = @"
 $file = """ + command.DestinationFolder + @"\last_access_date.txt"";
@@ -112,54 +111,53 @@ try {
 } catch { }
 " + command.ToString() + @"(&{ If($maxlad_flag) { ""/MAXAGE:$lbd""} Else { """" } })";
             return Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
-            //return Regex.Replace(script, @"\t|\n|\r", " ").Replace("\"", "\\\"");
+            // return Regex.Replace(script, @"\t|\n|\r", " ").Replace("\"", "\\\"");
         }
 
-        private string ActivateText(bool active) {
+        private static string ActivateText(bool active) {
             return active ? "Deactivate" : "Activate";
         }
 
+        private const string ScheduledBackupTaskName = "BackupTask";
 
-        private static string ScheduledBackupTaskName = @"BackupTask";
-
-        private Task SetScheduledBackupTaskActive(bool active) {
+        private static Task SetScheduledBackupTaskActive(bool active) {
             using (TaskService ts = new TaskService())
                 return SetScheduledBackupTaskActive(active, ts);
         }
-        private Task SetScheduledBackupTaskActive(bool active, TaskService ts) {
+        private static Task SetScheduledBackupTaskActive(bool active, TaskService ts) {
             if (IsScheduledBackupTaskActive(ts))
                 RemoveScheduledBackupTask(ts);
             return active ? AddScheduledBackupTask(ts) : null;
         }
-        private void RemoveScheduledBackupTask() {
-            using (TaskService ts = new TaskService())
-                RemoveScheduledBackupTask(ts);
-        }
-        private void RemoveScheduledBackupTask(TaskService ts) {
+        // private static void RemoveScheduledBackupTask() {
+        //     using (TaskService ts = new TaskService())
+        // RemoveScheduledBackupTask(ts);
+        // }
+        private static void RemoveScheduledBackupTask(TaskService ts) {
             ts.RootFolder.DeleteTask(ScheduledBackupTaskName, false);
         }
 
-        private bool IsScheduledBackupTaskActive() {
-            using (TaskService ts = new TaskService())
-                return IsScheduledBackupTaskActive(ts);
-        }
-        private bool IsScheduledBackupTaskActive(TaskService ts) {
+        // private static bool IsScheduledBackupTaskActive() {
+        //     using (TaskService ts = new TaskService())
+        //         return IsScheduledBackupTaskActive(ts);
+        // }
+        private static bool IsScheduledBackupTaskActive(TaskService ts) {
             return GetScheduledBackupTask(ts) != null;
         }
 
-        private Task GetScheduledBackupTask() {
-            using (TaskService ts = new TaskService())
-                return GetScheduledBackupTask(ts);
-        }
-        private Task GetScheduledBackupTask(TaskService ts) {
+        // private Task GetScheduledBackupTask() {
+        //     using (TaskService ts = new TaskService())
+        //         return GetScheduledBackupTask(ts);
+        // }
+        private static Task GetScheduledBackupTask(TaskService ts) {
             return ts.FindTask(ScheduledBackupTaskName);
         }
 
-        private Task AddScheduledBackupTask() {
-            using (TaskService ts = new TaskService())
-                return AddScheduledBackupTask(ts);
-        }
-        private Task AddScheduledBackupTask(TaskService ts) {
+        // private static Task AddScheduledBackupTask() {
+        //     using (TaskService ts = new TaskService())
+        //         return AddScheduledBackupTask(ts);
+        // }
+        private static Task AddScheduledBackupTask(TaskService ts) {
             TaskDefinition td = ts.NewTask();
             td.RegistrationInfo.Author = "Martin Braunsperger";
             td.RegistrationInfo.Description = "Backup Task";

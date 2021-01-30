@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SRCBackup {
     public static class Extensions {
-
         public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key) =>
             dictionary.GetOrDefault(key, default(TValue));
 
@@ -17,6 +13,5 @@ namespace SRCBackup {
 
         public static TValue? GetOrNull<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key) where TValue : struct =>
             dictionary != null && dictionary.TryGetValue(key, out TValue value) ? (TValue?)value : null;
-
     }
 }

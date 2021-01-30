@@ -4,16 +4,14 @@ using System.Collections.Generic;
 
 namespace SRCBackup {
     public static class Robocopy {
-
         public class Command {
-
             public string SourceFolder;
             public string DestinationFolder;
             public string BackupFolderName;
 
             public IList<string> Options = new List<string>() { "FFT", "R:3", "W:5", "Z", "XJ", "EFSRAW", "S" };
             public string OptionString => Options.Select(e => (e.FirstOrDefault() != '/' ? "/" : "") + e).Aggregate("", (a, b) => a + " " + b);
-            public string Arguments => string.Format("\"{0}\" \"{1}\\{2}\" {3}", SourceFolder, DestinationFolder, BackupFolderName, OptionString);
+            public string Arguments => $"\"{SourceFolder}\" \"{DestinationFolder}\\{BackupFolderName}\" {OptionString}";
 
             public Command(string sourceFolder, string destinationFolder, string backupFolderName = "Get-Date -Format \"yyyy-MM-dd-HHmmss\"", bool WrapBackupFolderName = true) {
                 SourceFolder = sourceFolder;
@@ -22,7 +20,6 @@ namespace SRCBackup {
             }
 
             public override string ToString() => "robocopy " + Arguments;
-
         }
 
         public static Process Run(Command command) {
@@ -37,6 +34,5 @@ namespace SRCBackup {
 
             return process;
         }
-
     }
 }
